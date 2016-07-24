@@ -1,0 +1,8 @@
+{
+	"id": "prism",
+	"name": "ETC/ETH Prism",
+	"description": "Use a Prism contract to split off ETC from ETH",
+	"version": "1.0",
+	"author": "???",
+	"iconUrl": "title.png"
+}
