@@ -6,11 +6,11 @@ import {paddedHex, HexDump, Balance} from './react-web3.jsx';
 
 export class VMTrace extends React.Component {
 	render () {
-		var code = this.props.trace.code;
-		var rows = this.props.trace.ops.map(function(l) {
-			var info = Instructions[code[l.pc]];
-			var name = (typeof(info) != "undefined") ? info.name : "!?";
-			return (<div style={{whiteSpace: "nowrap"}}>
+		var code = hexToArray(this.props.trace.code);
+		var rows = this.props.trace.ops.map(function(l, i) {
+			var info = l.pc < code.length ? get_info(code[l.pc]) : get_info(0);
+			var name = (info != null) ? info.name : "INVALID";
+			return (<div key={i} style={{whiteSpace: "nowrap"}}>
 				<span style={{fontSize: "x-small", fontFamily: "monospace"}}>{paddedHex(l.pc, 4)}</span>&nbsp;
 				<span style={{fontWeight: "bold", fontFamily: "monospace", display: "inline-block", width: "8em"}}>{name}</span>&nbsp;
 				<span style={{color: "green", fontSize: "small", fontFamily: "monospace"}}>{l.ex !== null ? l.ex.push.slice().reverse().join(' ') : ''}</span>&nbsp;
@@ -31,24 +31,40 @@ Array.prototype.spliceArray = function(index, n, array) {
 	return Array.prototype.splice.apply(this, [index, n].concat(array));
 }
 
+function hexToArray(h) {
+	if (h.startsWith('0x'))
+		h = h.substr(2);
+	var ret = [];
+	for (var i = 0; i < h.length; i += 2)
+		ret.push(parseInt(h.substr(i, 2), 16));
+	return ret;
+} 
+
 export function processVMTrace(trace) {
-	var c = trace.code;
+	var code = hexToArray(trace.code);
 	var stack = [];
 	var memory = [];
 	var storage = {};
+	console.log("code=" + JSON.stringify(code));
 	trace.ops = trace.ops.map(function(o) {
-		var i = get_info(c[o.pc]);
-		o.pop = stack.splice(-i.args, i.args);
-		o.stack = stack.slice();
-		if (o.ex !== null) {
-			o.ex.push.forEach(function(x){ stack.push(x); });
-			if (o.ex.mem !== null) {
-				memory = memory.slice();
-				memory.spliceArray(o.ex.mem.off, o.ex.mem.data.length, o.ex.mem.data);
-			}
-			if (o.ex.store !== null) {
-				storage = Object.assign({}, storage);
-				storage[o.ex.store.key] = o.ex.store.val;
+		var i = o.pc < code.length ? get_info(code[o.pc]) : Instructions[0];
+		if (i == null) {
+			o.invalid_instruction = true;
+			o.pop = [];
+			o.stack = [];
+		} else {
+			o.pop = stack.splice(-i.args, i.args);
+			o.stack = stack.slice();
+			if (o.ex !== null) {
+				o.ex.push.forEach(function(x){ stack.push(x); });
+				if (o.ex.mem !== null) {
+					memory = memory.slice();
+					memory.spliceArray(o.ex.mem.off, o.ex.mem.data.length, o.ex.mem.data);
+				}
+				if (o.ex.store !== null) {
+					storage = Object.assign({}, storage);
+					storage[o.ex.store.key] = o.ex.store.val;
+				}
 			}
 		}
 		o.memory = memory;
@@ -56,6 +72,24 @@ export function processVMTrace(trace) {
 		return o;
 	});
 	return trace;
+}
+
+function processTraceRec(traces, index, trace) {
+	trace.children = [];
+	for (var i = 0; i < trace.subtraces; ++i) {
+		var t = traces[index];
+		index++;
+		index = processTraceRec(traces, index, t);
+		trace.children.push(t);
+	}
+	return index;
+}
+
+export function processTrace(trace) {
+	//action, error|result, subtraces, traceAddress, type
+	var t = trace[0]
+	processTraceRec(trace, 1, t);
+	return t;
 }
 
 export function showVMTrace(trace) {

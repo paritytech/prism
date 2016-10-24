@@ -2,6 +2,10 @@ import 'jquery';
 import BigNumber from 'bignumber.js';
 import React from 'react';
 import {render} from 'react-dom';
+import Web3 from 'web3';
+
+var isManaged = typeof(window.web3) == "object";
+var web3 = isManaged ? window.web3 : new Web3(new Web3.providers.HttpProvider("http://127.0.0.1:8080/rpc"));
 
 export function paddedHex(i, l) {
 	return ("0".repeat(l) + i.toString(16)).substr(-l);
@@ -18,7 +22,7 @@ export class HexDump extends React.Component {
 				if (j < hex.length)
 					text += paddedHex(hex[j], 2) + " ";
 				else
-					text += "  ";
+					text += "   ";
 			text += "  ";
 			for (var j = i; j < i + bytesPerLine; ++j)
 				if (j < hex.length && hex[j] >= 32 && hex[j] < 128)

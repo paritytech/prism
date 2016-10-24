@@ -6,6 +6,7 @@ import {web3} from './web3plus.jsx';
 import {HexDump, Balance, InputBalance, TokenContractBalance, Account, AccountBalance} from './react-web3.jsx';
 import {InteractionConsole} from './react-prism.jsx';
 import {Log} from './react-events.jsx';
+import {showVMTrace, processVMTrace} from './react-vmtrace.jsx';
 
 export var Prism = web3.eth.contract([{"constant":true,"inputs":[],"name":"forked","outputs":[{"name":"","type":"bool"}],"type":"function"},{"constant":false,"inputs":[{"name":"to","type":"address"}],"name":"transferETC","outputs":[],"type":"function"},{"constant":false,"inputs":[{"name":"to","type":"address"}],"name":"transferETH","outputs":[],"type":"function"},{"inputs":[],"type":"constructor"}]);
 
@@ -45,3 +46,8 @@ export class App extends React.Component {
 // for debug console happiness.
 window.web3 = web3;
 window.Prism = Prism;
+window.showVMTrace = showVMTrace;
+window.processVMTrace = processVMTrace;
+window.processVMTrace = processTrace;
+window.showCallTrace = function(options) { showVMTrace(processVMTrace(web3.eth.traceCall(options, ['vmTrace']).vmTrace)) };
+window.showReplayTrace = function(options) { showVMTrace(processVMTrace(web3.eth.traceReplayTransaction(options, ['vmTrace']).vmTrace)) };
